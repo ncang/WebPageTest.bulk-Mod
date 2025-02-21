@@ -12,6 +12,9 @@
  *
  * Copyright (c) 2013-2020 Andy Davies, @andydavies, http://andydavies.me
  *
+ * Modified in Feb 2025 by Encang
+ * - Change : capturing LCP & CLS in firstview
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
  * associated documentation files (the "Software"), to deal in the Software without restriction,
  * including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -155,73 +158,81 @@ function submitTests() {
  */
 
 function getResults() {
-  var spreadsheet = SpreadsheetApp.getActive();
-  var sheet = spreadsheet.getSheetByName(TESTS_TAB);
+    var sheet = SpreadsheetApp.getActive().getSheetByName(TESTS_TAB);
+    var params = [
+        { param: "f", value: "json" },
+        { param: "normalizekeys", value: getNormalizeKeys() },
+    ];
+    var querystring = buildQueryString(params);
+    var urls_array = sheet.getRange(2, 3, sheet.getLastRow() - 1, 2).getValues();
+    var resultsMap = getResultsMap();
+    var outstandingResults = 0;
 
-  // Build querystring, allowing the WPT fields to be normalised (remove - and .) or not
-  var normalizeKeys = getNormalizeKeys();
+    for (var i = 0; i < urls_array.length; i++) {
+        var url = urls_array[i][0],
+            status = urls_array[i][1];
 
-  var params = [
-    {
-      param: "f",
-      value: "json",
-    },
-    {
-      param: "normalizekeys",
-      value: normalizeKeys,
-    },
-  ];
+        if (url && status < 200) {
+            var wptAPI = url + "?" + querystring;
+            var response = UrlFetchApp.fetch(wptAPI).getContentText();
+            var result = JSON.parse(response);
 
-  var querystring = buildQueryString(params);
-
-  var range = sheet.getRange(2, 3, sheet.getLastRow() - 1, 2); // Just get URL for test, and status columns
-
-  var urls_array = range.getValues();
-
-  var resultsMap = getResultsMap();
-
-  var outstandingResults = 0; // track how many tests yet to complete
-
-  for (var i = 0; i < urls_array.length; i++) {
-    var url = urls_array[i][0];
-    var status = urls_array[i][1];
-
-    if (url && status < 200) {
-      // WebPageTest
-      var wptAPI = url + "?" + querystring;
-
-      var response = UrlFetchApp.fetch(wptAPI);
-      var result = JSON.parse(response.getContentText());
-
-      e = sheet.setActiveCell("D" + (2 + i));
-      e.setValue(result.statusCode);
-
-      if (result.statusCode < 200) {
-        outstandingResults++;
-      } else if (result.statusCode == 200) {
-        for (var column in resultsMap) {
-          cell = sheet.setActiveCell(column + (2 + i));
-
-          try {
-            var value = eval("result." + resultsMap[column].value); // TODO: remove eval
-
-            // some results field may not exist in some tests e.g. SpeedIndex relies on video capture
-            if (value != undefined) {
-              cell.setValue(eval("result." + resultsMap[column].value));
+            var firstView = result?.data?.average?.firstView;
+            if (!firstView) {
+                Logger.log("⚠️ First View data is missing!");
+                continue;
             }
-          } catch (e) {
-            // do nothing
-          }
-        }
-      }
-    }
-  }
 
-  // If all tests have completed cancel the trigger
-  if (outstandingResults == 0) {
-    cancelTrigger();
-  }
+            Logger.log("🔹 Available keys in firstView: " + Object.keys(firstView));
+
+            var LCP = firstView?.chromeUserTimingLargestContentfulPaint;
+            var CLS = firstView?.chromeUserTimingCumulativeLayoutShift;
+
+            if (LCP !== undefined) {
+                Logger.log("✅ LCP Found: " + LCP);
+                sheet.getRange(2 + i, 7).setValue(LCP);  // Write to Column
+            } else {
+                Logger.log("❌ LCP Not Found!");
+            }
+
+            if (CLS !== undefined) {
+                Logger.log("✅ CLS Found: " + CLS);
+                sheet.getRange(2 + i, 8).setValue(CLS);  // Write to Column
+            } else {
+                Logger.log("❌ CLS Not Found!");
+            }
+
+            // Save Status Code
+            var resultCode = result?.statusCode;
+            sheet.getRange(2 + i, 4).setValue(resultCode);
+
+            if (resultCode < 200) {
+                outstandingResults++;
+            } else if (resultCode == 200) {
+                for (var column in resultsMap) {
+                    var fieldPath = resultsMap[column].value;
+                    var fieldValue;
+
+                    try {
+                        fieldValue = fieldPath.split('.').reduce((o, k) => (o || {})[k], result);
+                    } catch (e) {
+                        Logger.log("❌ Error accessing field: " + fieldPath);
+                    }
+
+                    if (fieldValue !== undefined) {
+                        Logger.log("✅ Setting value for " + column + ": " + fieldValue);
+                        sheet.getRange(2 + i, column.charCodeAt(0) - 64).setValue(fieldValue);
+                    }
+                }
+            }
+        }
+    }
+
+    if (outstandingResults === 0) {
+        cancelTrigger();
+    }
 }
+
 
 /**
  * Retrieves WPT server URL from Settings tab
