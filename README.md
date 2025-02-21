@@ -19,7 +19,7 @@ There are brief instructions below but for more detailed one see the Performance
 
 1. Make a copy of Spreadsheet
 
-	[WPT Bulk Tester v0.7](https://docs.google.com/spreadsheets/d/10-FAt5eelHXjzQqgx5o-JvUqrKAMIux2kp-sAwHARwk)
+	[WPT Bulk Tester Template - Mod](https://docs.google.com/spreadsheets/d/1aU3eV1dP27Ru99X9SjvnDyhLUVyHg3drcDpr0-YbsN8/edit?gid=0#gid=0)
 
 	The spreadsheet is shared read-only so you'll first need to make a copy
 
@@ -31,13 +31,16 @@ There are brief instructions below but for more detailed one see the Performance
 3. Defining Tests - Scenarios Tab
 
 	Create one or more test scenarios (a scenario is a named set of test parameters)
-	First column must always be the name of the scenario, other columns are defined by the Parameters map in the Settings tab
+	First column must always be the name of the scenario, other columns are defined by the Parameters map in the Settings tab, this sheet have :
 
-4. Specifying URLs to be Tested - Tests Tab
+    - Jakarta, 3G Fast	: CGK_ID_01:Chrome.3GFast
+    - Jakarta, Cable	: CGK_ID_01:Chrome.Cable
+
+5. Specifying URLs to be Tested - Tests Tab
 
 	Add URLs to be tested in the first column, and scenario in the second (a drop down can be created via the Data > Validation menu, or just copy cell from previous row)
 
-5. Running Tests
+6. Running Tests
 
 	Once the URLs to be tested and the corresponding scenario have been defined, choose 'Run Tests' from WebPageTest menu (on first run the app will need to be authorised and the test re-submitted)
 
@@ -47,16 +50,9 @@ There are brief instructions below but for more detailed one see the Performance
 	To re-retrieve the results delete the status (and corresponding results) and choose 'Get Results' from the WebPageTest menu
 
 
-# Changes
+# Mod Changes
 
-## v0.6 - 26th Oct 2020
-
-- Change submission to use POST as GET requests are limited to 2,000 bytes (Thx @dougsillars)
-- Add `normalizekeys=1` to request for results so fields names containing `.` and `-` can be accessed without array notation (Thx @Nooshu)
-- Add silent error handling around requests for non-existent fields in results
-
-## v0.7 - 26th Mar 2024
-
-- Change API key submission to pass key in 'X-WPT-API-KEY' header instead of url 'k' parameter
+## 0.1
+ - try to catch CWV in fisrtview, especially LCP & CLS
 
 
