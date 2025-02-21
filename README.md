@@ -53,6 +53,6 @@ There are brief instructions below but for more detailed one see the Performance
 # Mod Changes
 
 ## 0.1
- - try to catch CWV in fisrtview, especially LCP & CLS
+ - try to catch CWV in firstview, especially LCP & CLS
 
 
